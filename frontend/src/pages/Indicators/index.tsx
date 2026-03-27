@@ -58,7 +58,14 @@ export default function Indicators() {
     setChartData(data)
   }, [selectedDef])
 
-  useEffect(() => { loadDefinitions() }, [])
+  // 首次加载所有指标的最新记录，用于过滤左侧列表
+  const [allRecords, setAllRecords] = useState<IndicatorRecord[]>([])
+  const loadAllRecords = useCallback(async () => {
+    const recs = await fetchRecords()
+    setAllRecords(recs)
+  }, [])
+
+  useEffect(() => { loadDefinitions(); loadAllRecords() }, [])
   useEffect(() => {
     if (selectedDef) { loadRecords(); loadChart() }
   }, [selectedDef])
@@ -103,8 +110,15 @@ export default function Indicators() {
     } finally { setLoading(false) }
   }
 
-  // group definitions by category
-  const grouped = definitions.reduce<Record<string, IndicatorDefinition[]>>((acc, d) => {
+  // 只展示有记录的指标（hasRecord 由 records 结构间接判断，这里用 API 的 chart data 辅助）
+  // 直接通过 definitions 是否在 records 中出现过来判断
+  const defsWithData = new Set(
+    allRecords.map(r => r.indicator_id).filter(Boolean)
+  )
+
+  // group definitions by category（只展示有数据的指标）
+  const defsToShow = definitions.filter(d => defsWithData.has(d.id) || d.id === selectedDef)
+  const grouped = defsToShow.reduce<Record<string, IndicatorDefinition[]>>((acc, d) => {
     const cat = d.category ?? '其他'
     if (!acc[cat]) acc[cat] = []
     acc[cat].push(d)

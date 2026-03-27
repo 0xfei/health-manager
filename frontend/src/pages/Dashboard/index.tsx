@@ -500,11 +500,11 @@ export default function Dashboard() {
 
         {/* 指标总览表 */}
         <Card
-          title={<Space><ExperimentOutlined /><span>所有指标最新值</span></Space>}
+          title={<Space><ExperimentOutlined /><span>指标最新值（有数据）</span></Space>}
           size="small"
         >
           <Table
-            dataSource={data?.indicators ?? []}
+            dataSource={(data?.indicators ?? []).filter(i => i.status !== 'unknown')}
             columns={columns}
             rowKey="indicator_id"
             size="small"

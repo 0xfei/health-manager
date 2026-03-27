@@ -95,9 +95,20 @@ export default function Medications() {
     { title: '频率', dataIndex: 'frequency', key: 'freq', width: 90 },
     { title: '开始日期', dataIndex: 'start_date', key: 'start', width: 100, render: (v: string | null) => v ?? '—' },
     {
-      title: '状态', key: 'status', width: 70,
-      render: (_: unknown, r: MedicationRecord) =>
-        !r.end_date ? <Tag color="success">用药中</Tag> : <Tag>已停药</Tag>,
+      title: '状态', key: 'status', width: 90,
+      render: (_: unknown, r: MedicationRecord) => {
+        if (!r.end_date) return <Tag color="success">用药中</Tag>
+        // 判断是否同药品存在后续（end_date 非空但同名药物有更新记录）
+        const sameDrug = records.filter(
+          x => x.drug_name === r.drug_name && x.id !== r.id
+        )
+        const hasNewer = sameDrug.some(
+          x => x.start_date && r.end_date && x.start_date >= r.end_date
+        )
+        return hasNewer
+          ? <Tag color="processing">已调整剂量</Tag>
+          : <Tag color="default">已停药</Tag>
+      },
     },
     { title: '备注', dataIndex: 'note', key: 'note', ellipsis: true },
     {

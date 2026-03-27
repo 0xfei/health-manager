@@ -12,7 +12,7 @@ const { Text } = Typography
 const menuItems = [
   { key: '/dashboard', icon: <DashboardOutlined />, label: '健康总览' },
   { key: '/indicators', icon: <ExperimentOutlined />, label: '检验指标' },
-  { key: '/aps', icon: <AlertOutlined />, label: 'APS · 抗凝' },
+  { key: '/aps', icon: <AlertOutlined />, label: '抗凝记录' },
   { key: '/symptoms', icon: <HeartOutlined />, label: '症状记录' },
   { key: '/medications', icon: <MedicineBoxOutlined />, label: '用药记录' },
   { key: '/visits', icon: <CalendarOutlined />, label: '就诊记录' },

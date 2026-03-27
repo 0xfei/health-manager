@@ -21,7 +21,7 @@ function inrStatus(v: number | null | undefined): { color: string; text: string;
 }
 
 export default function APSPage() {
-  const { printRef, handlePrint } = usePrint({ title: 'APS · 抗凝管理' })
+  const { printRef, handlePrint } = usePrint({ title: '抗凝记录' })
   const [logs, setLogs] = useState<INRDoseLog[]>([])
   const [timeline, setTimeline] = useState<INRTimelinePoint[]>([])
   const [modal, setModal] = useState(false)
@@ -107,7 +107,7 @@ export default function APSPage() {
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-        <Title level={4} style={{ margin: 0 }}>APS · 抗凝管理</Title>
+        <Title level={4} style={{ margin: 0 }}>抗凝记录</Title>
         <Space>
           <Button icon={<PrinterOutlined />} size="small" onClick={handlePrint}>打印</Button>
           <Button type="primary" icon={<PlusOutlined />} onClick={() => setModal(true)}>添加 INR 记录</Button>
@@ -174,13 +174,13 @@ export default function APSPage() {
 
         {/* INR + 华法林剂量联合趋势图 */}
         {timeline.length > 0 && (
-          <Card title="INR 趋势 + 华法林剂量（双轴联合图）" size="small" style={{ marginBottom: 20 }}>
+          <Card title="INR 趋势 + 华法林剂量（双轴联合图，仅含 INR 检测日）" size="small" style={{ marginBottom: 20 }}>
             <INRDoseChart data={timeline} height={360} />
           </Card>
         )}
 
         {/* 记录表 */}
-        <Card title="INR 记录历史" size="small">
+        <Card title="每日用药记录" size="small">
           <Table
             dataSource={logs}
             columns={columns}

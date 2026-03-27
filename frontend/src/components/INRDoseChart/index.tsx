@@ -19,9 +19,12 @@ export default function INRDoseChart({
   warnLow = 1.8,
   warnHigh = 3.5,
 }: Props) {
+  // INR 折线只显示有检测值的点，不连接 null 区间
   const dates = data.map(d => d.date)
-  const inrValues = data.map(d => d.inr_value)
-  const doseValues = data.map(d => d.warfarin_dose)
+  const inrValues = data.map(d => d.inr_value ?? null)
+  const doseValues = data.map(d => d.warfarin_dose ?? null)
+  // 只含有 INR 值的日期（用于 x 轴只展示检测点）
+  const hasInr = data.some(d => d.inr_value != null)
 
   const option = {
     tooltip: {
@@ -72,9 +75,10 @@ export default function INRDoseChart({
         type: 'line',
         yAxisIndex: 0,
         data: inrValues,
-        smooth: true,
-        symbol: 'circle',
-        symbolSize: 7,
+        smooth: false,
+        connectNulls: false,
+        symbol: (val: number | null) => val != null ? 'circle' : 'none',
+        symbolSize: 8,
         lineStyle: { color: '#3b6cbf', width: 2.5 },
         itemStyle: { color: '#3b6cbf' },
         markLine: {
