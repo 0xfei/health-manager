@@ -137,3 +137,32 @@ export interface DashboardSummary {
 }
 
 export type IndicatorStatus = 'normal' | 'warning' | 'danger' | 'unknown'
+
+// ── Analysis / Change Events ───────────────────────────────────────────────
+
+export interface ChangeEvent {
+  type: string
+  level: 'danger' | 'warning' | 'info' | 'good'
+  title: string
+  detail: string
+  indicator_id?: string | null
+  indicator_name?: string | null
+  current_value?: number | null
+  prev_value?: number | null
+  change_pct?: number | null
+  recorded_at?: string | null
+  medication_name?: string | null
+  event_date: string
+}
+
+export interface AnalysisResult {
+  generated_at: string
+  period_days: number
+  events: ChangeEvent[]
+  summary: {
+    danger: number
+    warning: number
+    info: number
+    good: number
+  }
+}

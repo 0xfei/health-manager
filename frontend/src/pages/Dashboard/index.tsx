@@ -2,16 +2,21 @@ import { useEffect, useState, useRef } from 'react'
 import {
   Row, Col, Card, Statistic, Tag, Table, Alert, Typography, Space,
   Badge, Spin, Button, Modal, Form, Input, Select, Tooltip, Divider,
+  Collapse, List,
 } from 'antd'
 import {
   ExperimentOutlined, HeartOutlined, AlertOutlined,
   CheckCircleOutlined, WarningOutlined, CloseCircleOutlined,
   CalendarOutlined, EditOutlined, PrinterOutlined,
   RobotOutlined, UserOutlined, MedicineBoxOutlined,
+  BellOutlined, ArrowRightOutlined, MedicineBoxFilled,
+  FireOutlined, InfoCircleOutlined, SmileOutlined,
+  ClockCircleOutlined,
 } from '@ant-design/icons'
-import { fetchDashboard, fetchProfile, upsertProfile, generateAISummary } from '../../api'
+import { fetchDashboard, fetchProfile, upsertProfile, generateAISummary, fetchAnalysis } from '../../api'
 import { usePrint } from '../../hooks/usePrint'
-import type { DashboardSummary, IndicatorSummaryItem } from '../../types'
+import { useNavigate } from 'react-router-dom'
+import type { DashboardSummary, IndicatorSummaryItem, AnalysisResult, ChangeEvent } from '../../types'
 
 const { Title, Text, Paragraph } = Typography
 
@@ -389,6 +394,165 @@ const columns = [
   },
 ]
 
+// ── 变化提醒卡片 ──────────────────────────────────────────────────────────────
+
+const LEVEL_CFG: Record<string, { color: string; bg: string; border: string; icon: React.ReactNode; label: string }> = {
+  danger:  { color: '#ff4d4f', bg: '#fff1f0', border: '#ffa39e', icon: <CloseCircleOutlined />, label: '危险' },
+  warning: { color: '#faad14', bg: '#fffbe6', border: '#ffe58f', icon: <WarningOutlined />,      label: '警告' },
+  info:    { color: '#1677ff', bg: '#e6f4ff', border: '#91caff', icon: <InfoCircleOutlined />,   label: '信息' },
+  good:    { color: '#52c41a', bg: '#f6ffed', border: '#b7eb8f', icon: <SmileOutlined />,        label: '好转' },
+}
+
+const TYPE_LABEL: Record<string, string> = {
+  indicator_danger:       '越界',
+  indicator_warning:      '偏离',
+  indicator_recovery:     '恢复',
+  indicator_trend_worse:  '趋势',
+  indicator_large_change: '波动',
+  medication_added:       '新药',
+  medication_stopped:     '停药',
+  inr_danger:             'INR',
+  overdue_check:          '超期',
+}
+
+function ChangeAlertsCard() {
+  const [result, setResult] = useState<AnalysisResult | null>(null)
+  const [analysisLoading, setAnalysisLoading] = useState(true)
+  const navigate = useNavigate()
+
+  useEffect(() => {
+    fetchAnalysis(90)
+      .then(setResult)
+      .catch(console.error)
+      .finally(() => setAnalysisLoading(false))
+  }, [])
+
+  if (analysisLoading) return null
+  if (!result || result.events.length === 0) return null
+
+  const { summary } = result
+
+  const collapseItems = [
+    {
+      key: 'alerts',
+      label: (
+        <Space>
+          <BellOutlined style={{ color: summary.danger > 0 ? '#ff4d4f' : '#faad14' }} />
+          <span style={{ fontWeight: 600 }}>
+            指标变化提醒
+            {summary.danger > 0 && (
+              <span style={{ color: '#ff4d4f', marginLeft: 6 }}>·  {summary.danger} 项危险</span>
+            )}
+            {summary.warning > 0 && (
+              <span style={{ color: '#faad14', marginLeft: 6 }}>·  {summary.warning} 项警告</span>
+            )}
+            {summary.good > 0 && (
+              <span style={{ color: '#52c41a', marginLeft: 6 }}>·  {summary.good} 项好转</span>
+            )}
+          </span>
+          <Text type="secondary" style={{ fontSize: 11 }}>最近 90 天</Text>
+        </Space>
+      ),
+      children: (
+        <div>
+          {/* 汇总 badge 行 */}
+          <Space style={{ marginBottom: 12 }} wrap>
+            {(['danger', 'warning', 'info', 'good'] as const).map(lv => {
+              const n = summary[lv]
+              if (!n) return null
+              const cfg = LEVEL_CFG[lv]
+              return (
+                <Tag
+                  key={lv}
+                  icon={cfg.icon}
+                  color={lv === 'danger' ? 'error' : lv === 'warning' ? 'warning' : lv === 'good' ? 'success' : 'processing'}
+                >
+                  {cfg.label} {n}
+                </Tag>
+              )
+            })}
+          </Space>
+
+          {/* 事件列表 */}
+          <List
+            size="small"
+            dataSource={result.events}
+            renderItem={(evt: ChangeEvent) => {
+              const cfg = LEVEL_CFG[evt.level] ?? LEVEL_CFG.info
+              return (
+                <List.Item
+                  style={{
+                    padding: '8px 12px',
+                    marginBottom: 6,
+                    borderRadius: 6,
+                    background: cfg.bg,
+                    border: `1px solid ${cfg.border}`,
+                  }}
+                  actions={[
+                    evt.indicator_id && (
+                      <Button
+                        key="view"
+                        type="link"
+                        size="small"
+                        icon={<ArrowRightOutlined />}
+                        style={{ fontSize: 12, padding: 0 }}
+                        onClick={() => navigate('/indicators')}
+                      >
+                        查看趋势
+                      </Button>
+                    ),
+                  ].filter(Boolean)}
+                >
+                  <List.Item.Meta
+                    avatar={
+                      <span style={{ color: cfg.color, fontSize: 16, lineHeight: 1 }}>
+                        {cfg.icon}
+                      </span>
+                    }
+                    title={
+                      <Space size={4}>
+                        <Text strong style={{ color: cfg.color, fontSize: 13 }}>
+                          {evt.title}
+                        </Text>
+                        <Tag style={{ fontSize: 10, padding: '0 4px', lineHeight: '16px' }}>
+                          {TYPE_LABEL[evt.type] ?? evt.type}
+                        </Tag>
+                      </Space>
+                    }
+                    description={
+                      <div>
+                        <Text style={{ fontSize: 12, color: '#374151' }}>{evt.detail}</Text>
+                        {evt.event_date && (
+                          <Text type="secondary" style={{ fontSize: 11, marginLeft: 8 }}>
+                            <ClockCircleOutlined style={{ marginRight: 2 }} />
+                            {evt.event_date}
+                          </Text>
+                        )}
+                      </div>
+                    }
+                  />
+                </List.Item>
+              )
+            }}
+          />
+
+          <Text type="secondary" style={{ fontSize: 11, display: 'block', marginTop: 4 }}>
+            分析时间：{result.generated_at}
+          </Text>
+        </div>
+      ),
+    },
+  ]
+
+  return (
+    <Collapse
+      defaultActiveKey={['alerts']}
+      style={{ marginBottom: 20 }}
+      items={collapseItems}
+    />
+  )
+}
+
 // ── 主页面 ────────────────────────────────────────────────────────────────────
 
 export default function Dashboard() {
@@ -497,6 +661,9 @@ export default function Dashboard() {
             style={{ marginBottom: 20 }}
           />
         )}
+
+        {/* 变化提醒卡片 */}
+        <ChangeAlertsCard />
 
         {/* 指标总览表 */}
         <Card

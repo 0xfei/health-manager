@@ -128,6 +128,33 @@ class UploadRecordOut(BaseModel):
     model_config = {"from_attributes": True}
 
 
+# ── Analysis / Change Events ──────────────────────────────────────────────────
+
+class ChangeEvent(BaseModel):
+    type: str                           # indicator_danger | indicator_warning | indicator_recovery
+                                        # indicator_trend_worse | indicator_large_change
+                                        # medication_added | medication_stopped
+                                        # inr_danger | overdue_check
+    level: str                          # danger | warning | info | good
+    title: str
+    detail: str
+    indicator_id: Optional[str] = None
+    indicator_name: Optional[str] = None
+    current_value: Optional[float] = None
+    prev_value: Optional[float] = None
+    change_pct: Optional[float] = None  # 变化百分比，正为升 负为降
+    recorded_at: Optional[str] = None
+    medication_name: Optional[str] = None
+    event_date: str
+
+
+class AnalysisResult(BaseModel):
+    generated_at: str
+    period_days: int
+    events: List[ChangeEvent]
+    summary: dict                       # {"danger": n, "warning": n, "info": n, "good": n}
+
+
 # ── Dashboard ─────────────────────────────────────────────────────────────────
 
 class IndicatorSummaryItem(BaseModel):

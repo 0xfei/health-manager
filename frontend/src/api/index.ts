@@ -2,7 +2,7 @@ import api from './client'
 import type {
   IndicatorDefinition, IndicatorRecord, IndicatorChartData,
   DashboardSummary, SymptomRecord, MedicationRecord,
-  INRDoseLog, INRTimelinePoint, VisitRecord,
+  INRDoseLog, INRTimelinePoint, VisitRecord, AnalysisResult,
 } from '../types'
 
 // ── Dashboard ──────────────────────────────────────────────────
@@ -142,6 +142,10 @@ export const fetchUploadRecords = (): Promise<unknown[]> =>
 
 export const deleteUpload = (id: string): Promise<void> =>
   api.delete(`/upload/${id}`).then(r => r.data)
+
+// ── Analysis / Change Events ───────────────────────────────────
+export const fetchAnalysis = (days = 90): Promise<AnalysisResult> =>
+  api.get('/analysis/changes', { params: { days } }).then(r => r.data)
 
 // ── Config ─────────────────────────────────────────────────────
 export const fetchFullConfig = (): Promise<Record<string, unknown>> =>

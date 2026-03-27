@@ -7,7 +7,7 @@ from pathlib import Path
 from backend.database.session import init_db
 from backend.seeds.indicators import seed_indicators
 from backend.database.session import SessionLocal
-from backend.routers import indicators, symptoms, medications, aps, visits, dashboard, upload, profile, auth
+from backend.routers import indicators, symptoms, medications, aps, visits, dashboard, upload, profile, auth, analysis
 from backend.services.config_service import get_config, reload_config
 from backend.middleware.auth import TokenAuthMiddleware
 
@@ -56,6 +56,7 @@ app.include_router(dashboard.router)
 app.include_router(upload.router)
 app.include_router(profile.router)
 app.include_router(auth.router)
+app.include_router(analysis.router)
 
 
 @app.on_event("startup")
