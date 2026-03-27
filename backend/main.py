@@ -118,3 +118,106 @@ def config_reload():
         "image": cfg.parse.image.provider,
         "symptom": cfg.parse.symptom.provider,
     }}
+
+
+@app.post("/api/config/update")
+def update_config(payload: dict):
+    """
+    直接更新 config.yaml 中的解析配置，保存后立即热重载生效。
+
+    payload 结构示例：
+    {
+      "parse": {
+        "text":     { "provider": "ollama", "model": "qwen2.5:7b", "api_key": "", "base_url": "http://localhost:11434/v1" },
+        "image":    { "provider": "ollama", "model": "qwen2.5:7b", "ocr_engine": "paddleocr", "use_vision": false, ... },
+        "document": { ... },
+        "symptom":  { "provider": "rule_based", ... }
+      }
+    }
+    只需传入要修改的字段，未传入的字段保持不变。
+    """
+    import yaml as _yaml
+    from pathlib import Path as _Path
+
+    config_path = _Path(__file__).parent / "config.yaml"
+
+    # 读取现有配置（原始 YAML 字典，保留注释格式之外的值）
+    if config_path.exists():
+        with open(config_path, "r", encoding="utf-8") as f:
+            current_raw = _yaml.safe_load(f) or {}
+    else:
+        current_raw = {}
+
+    # 深度合并：payload 中的字段覆盖现有值
+    def _deep_merge(base: dict, override: dict) -> dict:
+        result = dict(base)
+        for k, v in override.items():
+            if isinstance(v, dict) and isinstance(result.get(k), dict):
+                result[k] = _deep_merge(result[k], v)
+            else:
+                result[k] = v
+        return result
+
+    merged = _deep_merge(current_raw, payload)
+
+    # 写回 config.yaml
+    with open(config_path, "w", encoding="utf-8") as f:
+        _yaml.dump(merged, f, allow_unicode=True, default_flow_style=False, sort_keys=False)
+
+    # 立即热重载
+    cfg = reload_config()
+    return {
+        "ok": True,
+        "message": "配置已更新并重载",
+        "parse": {
+            "text":     {"provider": cfg.parse.text.provider, "model": cfg.parse.text.model, "base_url": cfg.parse.text.base_url},
+            "image":    {"provider": cfg.parse.image.provider, "model": cfg.parse.image.model, "ocr_engine": cfg.parse.image.ocr_engine, "use_vision": cfg.parse.image.use_vision},
+            "document": {"provider": cfg.parse.document.provider, "model": cfg.parse.document.model, "pdf_backend": cfg.parse.document.pdf_backend},
+            "symptom":  {"provider": cfg.parse.symptom.provider, "model": cfg.parse.symptom.model},
+        },
+    }
+
+
+@app.get("/api/config/full")
+def get_full_config():
+    """返回完整配置（含 api_key，仅用于前端表单回填）"""
+    cfg = get_config()
+    return {
+        "parse": {
+            "text": {
+                "provider": cfg.parse.text.provider,
+                "model": cfg.parse.text.model,
+                "api_key": cfg.parse.text.api_key,
+                "base_url": cfg.parse.text.base_url,
+                "timeout": cfg.parse.text.timeout,
+            },
+            "image": {
+                "provider": cfg.parse.image.provider,
+                "model": cfg.parse.image.model,
+                "api_key": cfg.parse.image.api_key,
+                "base_url": cfg.parse.image.base_url,
+                "ocr_engine": cfg.parse.image.ocr_engine,
+                "ocr_lang": cfg.parse.image.ocr_lang,
+                "use_vision": cfg.parse.image.use_vision,
+                "timeout": cfg.parse.image.timeout,
+            },
+            "document": {
+                "provider": cfg.parse.document.provider,
+                "model": cfg.parse.document.model,
+                "api_key": cfg.parse.document.api_key,
+                "base_url": cfg.parse.document.base_url,
+                "pdf_backend": cfg.parse.document.pdf_backend,
+                "fallback_to_image": cfg.parse.document.fallback_to_image,
+            },
+            "symptom": {
+                "provider": cfg.parse.symptom.provider,
+                "model": cfg.parse.symptom.model,
+                "api_key": cfg.parse.symptom.api_key,
+                "base_url": cfg.parse.symptom.base_url,
+            },
+        },
+        "upload": {
+            "dir": cfg.upload.dir,
+            "max_size_mb": cfg.upload.max_size_mb,
+        },
+    }

@@ -142,3 +142,15 @@ export const fetchUploadRecords = (): Promise<unknown[]> =>
 
 export const deleteUpload = (id: string): Promise<void> =>
   api.delete(`/upload/${id}`).then(r => r.data)
+
+// ── Config ─────────────────────────────────────────────────────
+export const fetchFullConfig = (): Promise<Record<string, unknown>> =>
+  api.get('/config/full').then(r => r.data)
+
+export const updateConfig = (payload: Record<string, unknown>): Promise<{
+  ok: boolean; message: string; parse: Record<string, unknown>
+}> =>
+  api.post('/config/update', payload).then(r => r.data)
+
+export const reloadConfig = (): Promise<{ ok: boolean; message: string }> =>
+  api.post('/config/reload').then(r => r.data)
