@@ -3,10 +3,11 @@ import {
   Card, Table, Button, Modal, Form, Input, InputNumber,
   DatePicker, Space, Typography, Tag, Popconfirm, message, Select, Switch, Row, Col,
 } from 'antd'
-import { PlusOutlined, DeleteOutlined, EditOutlined } from '@ant-design/icons'
+import { PlusOutlined, DeleteOutlined, EditOutlined, PrinterOutlined } from '@ant-design/icons'
 import dayjs from 'dayjs'
 import { fetchMedications, createMedication, updateMedication, deleteMedication } from '../../api'
 import type { MedicationRecord } from '../../types'
+import { usePrint } from '../../hooks/usePrint'
 
 const { Title, Text } = Typography
 const { Option } = Select
@@ -112,16 +113,23 @@ export default function Medications() {
     },
   ]
 
+  const { printRef, handlePrint } = usePrint({ title: '用药记录' })
+
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
         <Title level={4} style={{ margin: 0 }}>用药记录</Title>
-        <Button type="primary" icon={<PlusOutlined />} onClick={() => setModal(true)}>添加药物</Button>
+        <Space>
+          <Button icon={<PrinterOutlined />} size="small" onClick={handlePrint}>打印</Button>
+          <Button type="primary" icon={<PlusOutlined />} onClick={() => setModal(true)}>添加药物</Button>
+        </Space>
       </div>
 
+      <div ref={printRef}>
       <Card size="small">
         <Table dataSource={records} columns={columns} rowKey="id" size="small" pagination={{ pageSize: 15 }} />
       </Card>
+      </div>
 
       <Modal
         title={editTarget ? '编辑用药记录' : '添加用药记录'}

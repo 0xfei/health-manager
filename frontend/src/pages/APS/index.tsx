@@ -3,11 +3,12 @@ import {
   Card, Table, Button, Modal, Form, Input, InputNumber,
   DatePicker, Space, Typography, Tag, Popconfirm, message, Badge, Row, Col, Alert,
 } from 'antd'
-import { PlusOutlined, DeleteOutlined, AlertOutlined } from '@ant-design/icons'
+import { PlusOutlined, DeleteOutlined, AlertOutlined, PrinterOutlined } from '@ant-design/icons'
 import dayjs from 'dayjs'
 import { fetchINRLogs, fetchINRTimeline, createINRLog, deleteINRLog } from '../../api'
 import type { INRDoseLog, INRTimelinePoint } from '../../types'
 import INRDoseChart from '../../components/INRDoseChart'
+import { usePrint } from '../../hooks/usePrint'
 
 const { Title, Text } = Typography
 
@@ -20,6 +21,7 @@ function inrStatus(v: number | null | undefined): { color: string; text: string;
 }
 
 export default function APSPage() {
+  const { printRef, handlePrint } = usePrint({ title: 'APS · 抗凝管理' })
   const [logs, setLogs] = useState<INRDoseLog[]>([])
   const [timeline, setTimeline] = useState<INRTimelinePoint[]>([])
   const [modal, setModal] = useState(false)
@@ -106,76 +108,89 @@ export default function APSPage() {
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
         <Title level={4} style={{ margin: 0 }}>APS · 抗凝管理</Title>
-        <Button type="primary" icon={<PlusOutlined />} onClick={() => setModal(true)}>添加 INR 记录</Button>
+        <Space>
+          <Button icon={<PrinterOutlined />} size="small" onClick={handlePrint}>打印</Button>
+          <Button type="primary" icon={<PlusOutlined />} onClick={() => setModal(true)}>添加 INR 记录</Button>
+        </Space>
       </div>
 
-      {/* 最新状态卡片 */}
-      <Row gutter={16} style={{ marginBottom: 20 }}>
-        <Col span={8}>
-          <Card className="stat-card" size="small">
-            <Text type="secondary" style={{ fontSize: 12 }}>最新 INR</Text>
-            <div style={{ marginTop: 8, fontSize: 28, fontWeight: 700, color: latestStatus.color }}>
-              {latest?.inr_value ?? '—'}
-            </div>
-            <Badge status={latestStatus.badgeStatus} text={latestStatus.text} />
-            {latest?.log_date && <Text type="secondary" style={{ fontSize: 11, display: 'block', marginTop: 4 }}>{latest.log_date}</Text>}
-          </Card>
-        </Col>
-        <Col span={8}>
-          <Card className="stat-card" size="small">
-            <Text type="secondary" style={{ fontSize: 12 }}>最新华法林剂量</Text>
-            <div style={{ marginTop: 8, fontSize: 28, fontWeight: 700, color: '#d97706' }}>
-              {latest?.warfarin_dose != null ? `${latest.warfarin_dose} mg` : '—'}
-            </div>
-            <Text type="secondary" style={{ fontSize: 12 }}>每日剂量</Text>
-          </Card>
-        </Col>
-        <Col span={8}>
-          <Card className="stat-card" size="small">
-            <Text type="secondary" style={{ fontSize: 12 }}>下次复查</Text>
-            {latest?.next_test_date ? (
-              <>
-                <div style={{ marginTop: 8, fontSize: 20, fontWeight: 700 }}>{latest.next_test_date}</div>
-                {(() => {
-                  const diff = dayjs(latest.next_test_date).diff(dayjs(), 'day')
-                  return <Text style={{ color: diff <= 3 ? '#ff4d4f' : '#6b7280', fontSize: 12 }}>
-                    {diff >= 0 ? `还剩 ${diff} 天` : '已过期，请尽快复查'}
-                  </Text>
-                })()}
-              </>
-            ) : <div style={{ marginTop: 8, color: '#9ca3af' }}>未设置</div>}
-          </Card>
-        </Col>
-      </Row>
+      <div ref={printRef}>
+        {/* 最新状态卡片 */}
+        <Row gutter={16} style={{ marginBottom: 20 }}>
+          <Col span={8}>
+            <Card className="stat-card" size="small">
+              <Text type="secondary" style={{ fontSize: 12 }}>最新 INR</Text>
+              <div style={{ marginTop: 8, fontSize: 28, fontWeight: 700, color: latestStatus.color }}>
+                {latest?.inr_value ?? '—'}
+              </div>
+              <Badge status={latestStatus.badgeStatus} text={latestStatus.text} />
+              {latest?.log_date && (
+                <Text type="secondary" style={{ fontSize: 11, display: 'block', marginTop: 4 }}>
+                  {latest.log_date}
+                </Text>
+              )}
+            </Card>
+          </Col>
+          <Col span={8}>
+            <Card className="stat-card" size="small">
+              <Text type="secondary" style={{ fontSize: 12 }}>最新华法林剂量</Text>
+              <div style={{ marginTop: 8, fontSize: 28, fontWeight: 700, color: '#d97706' }}>
+                {latest?.warfarin_dose != null ? `${latest.warfarin_dose} mg` : '—'}
+              </div>
+              <Text type="secondary" style={{ fontSize: 12 }}>每日剂量</Text>
+            </Card>
+          </Col>
+          <Col span={8}>
+            <Card className="stat-card" size="small">
+              <Text type="secondary" style={{ fontSize: 12 }}>下次复查</Text>
+              {latest?.next_test_date ? (
+                <>
+                  <div style={{ marginTop: 8, fontSize: 20, fontWeight: 700 }}>{latest.next_test_date}</div>
+                  {(() => {
+                    const diff = dayjs(latest.next_test_date).diff(dayjs(), 'day')
+                    return (
+                      <Text style={{ color: diff <= 3 ? '#ff4d4f' : '#6b7280', fontSize: 12 }}>
+                        {diff >= 0 ? `还剩 ${diff} 天` : '已过期，请尽快复查'}
+                      </Text>
+                    )
+                  })()}
+                </>
+              ) : (
+                <div style={{ marginTop: 8, color: '#9ca3af' }}>未设置</div>
+              )}
+            </Card>
+          </Col>
+        </Row>
 
-      {/* INR 参考说明 */}
-      <Alert
-        type="info"
-        showIcon
-        icon={<AlertOutlined />}
-        message="INR 目标区间说明"
-        description="静脉血栓：目标 2.0 – 3.0 | 动脉血栓/高风险 APS：目标 2.5 – 3.5（请遵医嘱）| 低于 1.8 提示抗凝不足，高于 3.5 提示出血风险"
-        style={{ marginBottom: 20 }}
-      />
-
-      {/* INR + 华法林剂量联合趋势图 */}
-      {timeline.length > 0 && (
-        <Card title="INR 趋势 + 华法林剂量（双轴联合图）" size="small" style={{ marginBottom: 20 }}>
-          <INRDoseChart data={timeline} height={360} />
-        </Card>
-      )}
-
-      {/* 记录表 */}
-      <Card title="INR 记录历史" size="small">
-        <Table
-          dataSource={logs}
-          columns={columns}
-          rowKey="id"
-          size="small"
-          pagination={{ pageSize: 15, size: 'small' }}
-          locale={{ emptyText: '暂无记录' }}
+        {/* INR 参考说明 */}
+        <Alert
+          type="info"
+          showIcon
+          icon={<AlertOutlined />}
+          message="INR 目标区间说明"
+          description="静脉血栓：目标 2.0 – 3.0 | 动脉血栓/高风险 APS：目标 2.5 – 3.5（请遵医嘱）| 低于 1.8 提示抗凝不足，高于 3.5 提示出血风险"
+          style={{ marginBottom: 20 }}
         />
-      </Card>
+
+        {/* INR + 华法林剂量联合趋势图 */}
+        {timeline.length > 0 && (
+          <Card title="INR 趋势 + 华法林剂量（双轴联合图）" size="small" style={{ marginBottom: 20 }}>
+            <INRDoseChart data={timeline} height={360} />
+          </Card>
+        )}
+
+        {/* 记录表 */}
+        <Card title="INR 记录历史" size="small">
+          <Table
+            dataSource={logs}
+            columns={columns}
+            rowKey="id"
+            size="small"
+            pagination={{ pageSize: 15, size: 'small' }}
+            locale={{ emptyText: '暂无记录' }}
+          />
+        </Card>
+      </div>
 
       {/* Add Modal */}
       <Modal

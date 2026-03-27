@@ -3,10 +3,11 @@ import {
   Card, Table, Button, Modal, Form, Input,
   DatePicker, Space, Typography, Popconfirm, message,
 } from 'antd'
-import { PlusOutlined, DeleteOutlined } from '@ant-design/icons'
+import { PlusOutlined, DeleteOutlined, PrinterOutlined } from '@ant-design/icons'
 import dayjs from 'dayjs'
 import { fetchVisits, createVisit, deleteVisit } from '../../api'
 import type { VisitRecord } from '../../types'
+import { usePrint } from '../../hooks/usePrint'
 
 const { Title, Text, Paragraph } = Typography
 
@@ -61,16 +62,23 @@ export default function Visits() {
     },
   ]
 
+  const { printRef, handlePrint } = usePrint({ title: '就诊记录' })
+
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
         <Title level={4} style={{ margin: 0 }}>就诊记录</Title>
-        <Button type="primary" icon={<PlusOutlined />} onClick={() => setModal(true)}>添加就诊</Button>
+        <Space>
+          <Button icon={<PrinterOutlined />} size="small" onClick={handlePrint}>打印</Button>
+          <Button type="primary" icon={<PlusOutlined />} onClick={() => setModal(true)}>添加就诊</Button>
+        </Space>
       </div>
 
+      <div ref={printRef}>
       <Card size="small">
         <Table dataSource={records} columns={columns} rowKey="id" size="small" pagination={{ pageSize: 15 }} locale={{ emptyText: '暂无就诊记录' }} />
       </Card>
+      </div>
 
       <Modal
         title="添加就诊记录"

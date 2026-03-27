@@ -7,7 +7,7 @@ from pathlib import Path
 from backend.database.session import init_db
 from backend.seeds.indicators import seed_indicators
 from backend.database.session import SessionLocal
-from backend.routers import indicators, symptoms, medications, aps, visits, dashboard, upload
+from backend.routers import indicators, symptoms, medications, aps, visits, dashboard, upload, profile
 from backend.services.config_service import get_config, reload_config
 
 app = FastAPI(
@@ -41,6 +41,7 @@ app.include_router(aps.router)
 app.include_router(visits.router)
 app.include_router(dashboard.router)
 app.include_router(upload.router)
+app.include_router(profile.router)
 
 
 @app.on_event("startup")

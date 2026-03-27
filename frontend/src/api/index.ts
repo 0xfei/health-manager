@@ -9,6 +9,16 @@ import type {
 export const fetchDashboard = (): Promise<DashboardSummary> =>
   api.get('/dashboard/summary').then(r => r.data)
 
+// ── Patient Profile ────────────────────────────────────────────
+export const fetchProfile = (): Promise<Record<string, unknown>> =>
+  api.get('/profile').then(r => r.data)
+
+export const upsertProfile = (data: Record<string, unknown>): Promise<Record<string, unknown>> =>
+  api.put('/profile', data).then(r => r.data)
+
+export const generateAISummary = (): Promise<{ ai_summary: string; ok: boolean }> =>
+  api.post('/profile/ai-summary').then(r => r.data)
+
 // ── Indicators ─────────────────────────────────────────────────
 export const fetchDefinitions = (): Promise<IndicatorDefinition[]> =>
   api.get('/indicators/definitions').then(r => r.data)
@@ -109,10 +119,26 @@ export const deleteVisit = (id: string): Promise<void> =>
   api.delete(`/visits/${id}`).then(r => r.data)
 
 // ── Upload ─────────────────────────────────────────────────────
-export const uploadFile = (file: File): Promise<{ id: string; file_name: string; status: string }> => {
+export const uploadFile = (file: File): Promise<{ id: string; file_name: string; status: string; file_type: string }> => {
   const form = new FormData()
   form.append('file', file)
   return api.post('/upload/file', form, {
     headers: { 'Content-Type': 'multipart/form-data' },
   }).then(r => r.data)
 }
+
+export const analyzeUpload = (uploadId: string): Promise<{
+  id: string; status: string; ai_parsed_json: Record<string, unknown> | null; error_msg: string | null
+}> =>
+  api.post(`/upload/analyze/${uploadId}`).then(r => r.data)
+
+export const confirmUpload = (uploadId: string, items?: Record<string, unknown>[]): Promise<{
+  imported: number; skipped: string[]; auto_created: string[]; message: string
+}> =>
+  api.post(`/upload/confirm/${uploadId}`, items ?? null).then(r => r.data)
+
+export const fetchUploadRecords = (): Promise<unknown[]> =>
+  api.get('/upload/records').then(r => r.data)
+
+export const deleteUpload = (id: string): Promise<void> =>
+  api.delete(`/upload/${id}`).then(r => r.data)

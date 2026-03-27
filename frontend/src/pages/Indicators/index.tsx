@@ -3,7 +3,7 @@ import {
   Card, Table, Button, Modal, Form, Input, InputNumber,
   Select, Space, Tag, Typography, Tabs, message, Popconfirm, DatePicker, Row, Col,
 } from 'antd'
-import { PlusOutlined, DeleteOutlined, LineChartOutlined, TableOutlined } from '@ant-design/icons'
+import { PlusOutlined, DeleteOutlined, LineChartOutlined, TableOutlined, PrinterOutlined } from '@ant-design/icons'
 import dayjs from 'dayjs'
 import {
   fetchDefinitions, fetchRecords, createRecord, deleteRecord,
@@ -11,6 +11,7 @@ import {
 } from '../../api'
 import type { IndicatorDefinition, IndicatorRecord, IndicatorChartData } from '../../types'
 import IndicatorChart from '../../components/IndicatorChart'
+import { usePrint } from '../../hooks/usePrint'
 
 const { Title, Text } = Typography
 const { Option } = Select
@@ -28,6 +29,7 @@ function statusColor(r: IndicatorRecord) {
 }
 
 export default function Indicators() {
+  const { printRef, handlePrint } = usePrint({ title: '检验指标' })
   const [definitions, setDefinitions] = useState<IndicatorDefinition[]>([])
   const [records, setRecords] = useState<IndicatorRecord[]>([])
   const [chartData, setChartData] = useState<IndicatorChartData[]>([])
@@ -149,6 +151,7 @@ export default function Indicators() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
         <Title level={4} style={{ margin: 0 }}>检验指标</Title>
         <Space>
+          <Button icon={<PrinterOutlined />} size="small" onClick={handlePrint}>打印</Button>
           <Button icon={<PlusOutlined />} onClick={() => setAddDefModal(true)}>新增指标</Button>
           <Button type="primary" icon={<PlusOutlined />} onClick={() => setAddRecordModal(true)} disabled={!selectedDef}>
             添加记录
@@ -156,6 +159,7 @@ export default function Indicators() {
         </Space>
       </div>
 
+      <div ref={printRef}>
       <Row gutter={16}>
         {/* Left: indicator selector */}
         <Col span={5}>
@@ -304,6 +308,7 @@ export default function Indicators() {
           </Form.Item>
         </Form>
       </Modal>
+      </div>
     </div>
   )
 }

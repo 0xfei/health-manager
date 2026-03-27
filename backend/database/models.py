@@ -121,9 +121,27 @@ class UploadRecord(Base):
     id = Column(String, primary_key=True, default=new_id)
     file_path = Column(String)
     file_name = Column(String)
-    file_type = Column(String)                      # image / pdf / text
+    file_type = Column(String)                      # image / pdf / text / doc / excel
     raw_ocr_text = Column(Text)
     ai_parsed_json = Column(JSON)
     status = Column(String, default="pending")      # pending / processing / done / failed
     error_msg = Column(Text)
     created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class PatientProfile(Base):
+    """患者健康档案（单条记录，upsert）"""
+    __tablename__ = "patient_profiles"
+
+    id = Column(String, primary_key=True, default=new_id)
+    diagnosed_at = Column(String)                   # 确诊日期，如 "2020-06"
+    disease_duration_note = Column(String)          # 确诊时长描述
+    current_medications = Column(Text)              # 当前用药描述
+    main_symptoms = Column(Text)                    # 主要症状
+    main_issues = Column(Text)                      # 主要问题（器官受累）
+    recovery_status = Column(String)                # 稳定期/活动期/缓解期
+    doctor_summary = Column(Text)                   # 医生最新医嘱/评价
+    ai_summary = Column(Text)                       # AI 生成的综合摘要
+    tags = Column(JSON)                             # 自定义标签列表
+    extra = Column(JSON)                            # 扩展字段
+    updated_at = Column(DateTime, default=datetime.utcnow)

@@ -3,10 +3,11 @@ import {
   Card, Table, Button, Modal, Form, Input, InputNumber,
   DatePicker, Space, Typography, Tag, Popconfirm, message, Rate,
 } from 'antd'
-import { PlusOutlined, DeleteOutlined } from '@ant-design/icons'
+import { PlusOutlined, DeleteOutlined, PrinterOutlined } from '@ant-design/icons'
 import dayjs from 'dayjs'
 import { fetchSymptoms, createSymptom, deleteSymptom } from '../../api'
 import type { SymptomRecord, ParsedSymptom } from '../../types'
+import { usePrint } from '../../hooks/usePrint'
 
 const { Title, Text, Paragraph } = Typography
 
@@ -99,13 +100,19 @@ export default function Symptoms() {
     },
   ]
 
+  const { printRef, handlePrint } = usePrint({ title: '症状记录' })
+
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
         <Title level={4} style={{ margin: 0 }}>症状记录</Title>
-        <Button type="primary" icon={<PlusOutlined />} onClick={() => setModal(true)}>记录症状</Button>
+        <Space>
+          <Button icon={<PrinterOutlined />} size="small" onClick={handlePrint}>打印</Button>
+          <Button type="primary" icon={<PlusOutlined />} onClick={() => setModal(true)}>记录症状</Button>
+        </Space>
       </div>
 
+      <div ref={printRef}>
       <Card size="small">
         <Table
           dataSource={records}
@@ -116,6 +123,7 @@ export default function Symptoms() {
           locale={{ emptyText: '暂无症状记录' }}
         />
       </Card>
+      </div>
 
       <Modal
         title="记录今日症状"
