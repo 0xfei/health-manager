@@ -7,8 +7,9 @@ from pathlib import Path
 from backend.database.session import init_db
 from backend.seeds.indicators import seed_indicators
 from backend.database.session import SessionLocal
-from backend.routers import indicators, symptoms, medications, aps, visits, dashboard, upload, profile
+from backend.routers import indicators, symptoms, medications, aps, visits, dashboard, upload, profile, auth
 from backend.services.config_service import get_config, reload_config
+from backend.middleware.auth import TokenAuthMiddleware
 
 app = FastAPI(
     title="SLE Health Manager API",
@@ -16,14 +17,26 @@ app = FastAPI(
     version="0.1.0",
 )
 
-# CORS: 允许本地前端访问
+# CORS: 允许本地前端及生产域名访问
+import os
+_cors_origins_env = os.environ.get("CORS_ORIGINS", "")
+_extra_origins = [o.strip() for o in _cors_origins_env.split(",") if o.strip()]
+_cors_origins = [
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+    "http://localhost:3000",
+    "http://localhost",
+] + _extra_origins
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173", "http://localhost:3000"],
+    allow_origins=_cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Token 认证中间件（必须在 CORS 之后注册，Starlette 中间件栈先进后出）
+app.add_middleware(TokenAuthMiddleware)
 
 # 挂载上传文件静态访问（路径从 config 读取）
 cfg = get_config()
@@ -42,6 +55,7 @@ app.include_router(visits.router)
 app.include_router(dashboard.router)
 app.include_router(upload.router)
 app.include_router(profile.router)
+app.include_router(auth.router)
 
 
 @app.on_event("startup")

@@ -19,7 +19,7 @@ vi.mock('echarts', () => ({
 }))
 
 // Mock ResizeObserver（Ant Design 需要）
-global.ResizeObserver = vi.fn().mockImplementation(() => ({
+;(globalThis as unknown as Record<string, unknown>).ResizeObserver = vi.fn().mockImplementation(() => ({
   observe: vi.fn(),
   unobserve: vi.fn(),
   disconnect: vi.fn(),

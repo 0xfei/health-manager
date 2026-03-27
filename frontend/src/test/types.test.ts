@@ -8,7 +8,7 @@ import type {
   ChartDataPoint, DashboardSummary, IndicatorSummaryItem,
   SymptomRecord, ParsedSymptom, MedicationRecord,
   INRDoseLog, INRTimelinePoint, VisitRecord, IndicatorStatus,
-} from '../../types'
+} from '../types'
 
 describe('TypeScript 类型定义', () => {
   it('IndicatorDefinition 包含所有必要字段', () => {

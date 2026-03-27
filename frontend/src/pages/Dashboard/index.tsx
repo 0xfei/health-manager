@@ -75,7 +75,7 @@ function HealthProfileCard({ onRefresh }: { onRefresh: () => void }) {
   const loadProfile = async () => {
     try {
       const p = await fetchProfile()
-      setProfile(p as ProfileData)
+      setProfile(p as unknown as ProfileData)
     } catch {
       setProfile(null)
     }

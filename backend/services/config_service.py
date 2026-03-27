@@ -57,10 +57,16 @@ class UploadConfig(BaseModel):
     ])
 
 
+class AuthConfig(BaseModel):
+    enabled: bool = True
+    access_token: str = ""
+
+
 class AppConfig(BaseModel):
     parse: ParseConfig = Field(default_factory=ParseConfig)
     database: DatabaseConfig = Field(default_factory=DatabaseConfig)
     upload: UploadConfig = Field(default_factory=UploadConfig)
+    auth: AuthConfig = Field(default_factory=AuthConfig)
 
 
 # ── 单例加载 ────────────────────────────────────────────────────────────────

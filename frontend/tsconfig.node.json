@@ -10,7 +10,8 @@
     "allowImportingTsExtensions": true,
     "noEmit": false,
     "emitDeclarationOnly": true,
-    "declaration": true
+    "declaration": true,
+    "types": ["vitest/config"]
   },
   "include": ["vite.config.ts"]
 }

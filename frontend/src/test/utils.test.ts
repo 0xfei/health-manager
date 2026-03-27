@@ -3,7 +3,7 @@
  * 覆盖：指标状态判断逻辑、日期格式化、INR 状态判断
  */
 import { describe, it, expect } from 'vitest'
-import type { IndicatorSummaryItem } from '../../types'
+import type { IndicatorSummaryItem } from '../types'
 
 // ── 指标状态判断（从 Dashboard 组件提取的逻辑）─────────────────────────────
 
