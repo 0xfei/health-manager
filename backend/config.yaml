@@ -21,17 +21,25 @@ parse:
     base_url: http://localhost:11434/v1   # ollama 本地地址; openai: https://api.openai.com/v1
     timeout: 30               # 请求超时（秒）
 
-  # 图片解析：从化验单照片/截图中提取指标（先 OCR 后 LLM）
+  # 图片解析：从化验单照片/截图中提取指标
+  # ── 模式一：通义千问 Vision（推荐，直接识图，最准确）──────────────────────────
+  # image:
+  #   provider: openai
+  #   model: qwen-vl-plus            # 推荐；更高精度可用 qwen-vl-max
+  #   api_key: "sk-你的DashScope密钥" # 登录 dashscope.console.aliyun.com 获取
+  #   base_url: https://dashscope.aliyuncs.com/compatible-mode/v1
+  #   use_vision: true               # 关键！直接视觉识图，跳过 OCR
+  #   ocr_engine: none
+  #   timeout: 60
+  # ── 模式二：本地 Ollama + PaddleOCR（免费，需要较大内存）──────────────────────
   image:
-    # 第一步：OCR 提取文字
     ocr_engine: paddleocr     # 可选: paddleocr | tesseract | none（跳过OCR，直接发给vision模型）
     ocr_lang: ch              # paddleocr语言: ch(中文) | en | ch_en
-    # 第二步：LLM 解析 OCR 结果（或直接用 vision 模型）
     provider: ollama          # 可选: openai | ollama | disabled
-    model: qwen2.5:7b         # vision模型示例: gpt-4o | llava:13b
+    model: qwen2.5:7b         # vision模型示例: qwen-vl-plus | gpt-4o | llava:13b
     api_key: ""
     base_url: http://localhost:11434/v1
-    use_vision: false         # true=直接把图片发给多模态模型; false=先OCR再文本解析
+    use_vision: false         # true=直接把图片发给多模态模型（通义千问/GPT-4o等）; false=先OCR再文本解析
     timeout: 60
 
   # 文档解析：PDF 化验报告

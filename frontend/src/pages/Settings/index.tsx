@@ -341,7 +341,11 @@ function ParseConfigTab() {
           <div><Text strong>OpenAI GPT-4o：</Text></div>
           <div>provider = <code>openai</code>，model = <code>gpt-4o</code>，base_url = <code>https://api.openai.com/v1</code>，api_key = <code>sk-xxx</code></div>
           <Divider style={{ margin: '8px 0' }} />
-          <div><Text strong>通义千问（阿里云）：</Text></div>
+          <div><Text strong>通义千问 - 图片 Vision 模式（推荐用于化验单截图）：</Text></div>
+          <div>provider = <code>openai</code>，model = <code>qwen-vl-plus</code>（或 <code>qwen-vl-max</code>），base_url = <code>https://dashscope.aliyuncs.com/compatible-mode/v1</code>，api_key = DashScope Key，<Tag color="blue">Vision 开关</Tag> 打开</div>
+          <div style={{ color: '#6b7280' }}>登录 dashscope.console.aliyun.com → API-KEY 管理 获取密钥；Vision 模式直接识图，无需 OCR，准确率更高</div>
+          <Divider style={{ margin: '8px 0' }} />
+          <div><Text strong>通义千问 - 文本解析模式：</Text></div>
           <div>provider = <code>openai</code>，model = <code>qwen-turbo</code>，base_url = <code>https://dashscope.aliyuncs.com/compatible-mode/v1</code>，api_key = 填写 DashScope Key</div>
           <Divider style={{ margin: '8px 0' }} />
           <div><Text strong>LM Studio / 任何 OpenAI 兼容 API：</Text></div>

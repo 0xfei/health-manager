@@ -95,12 +95,13 @@ def _extract_text_from_image(image_path: str) -> str:
 # ────────────────────────────────────────────────────────────
 
 LAB_SYSTEM_PROMPT = """你是一个专业的医疗检验报告解析助手。
-用户会提供中文化验单文本，你需要从中提取所有检验指标，并以 JSON 格式返回。
+用户会提供中文化验单的文本或图片，你需要从中提取所有检验指标，并以 JSON 格式返回。
 
 输出格式（严格 JSON，不要有多余说明）：
 {
   "report_date": "YYYY-MM-DD 或 null",
   "hospital": "医院名称 或 null",
+  "report_category": "检查报告类别，如：血常规、尿常规、生化全项、免疫全项、凝血功能、24h尿蛋白、肝肾功能、甲状腺功能、血糖血脂、肿瘤标志物、其他",
   "indicators": [
     {
       "name": "指标中文名",
@@ -118,9 +119,19 @@ LAB_SYSTEM_PROMPT = """你是一个专业的医疗检验报告解析助手。
 注意：
 - 不确定的字段返回 null，绝不猜测
 - value 字段必须是纯数字（float），文字结果放 value_text
+- report_category 根据化验单类型判断：
+  * 血常规：白细胞、红细胞、血红蛋白、血小板等
+  * 尿常规：蛋白质、葡萄糖、白细胞、红细胞（尿液）等
+  * 生化全项：肝功能 + 肾功能 + 血糖血脂等组合报告
+  * 免疫全项：ANA、抗dsDNA、补体、风湿相关抗体等
+  * 凝血功能：PT、APTT、INR、D-二聚体、纤维蛋白原等
+  * 24h尿蛋白：24小时尿蛋白定量
+  * 肝肾功能：ALT/AST/Cr/BUN等单独报告
+  * 如果无法判断填 "其他"
 - 常见指标中英文对照：白细胞=WBC、中性粒细胞=NEUT、淋巴细胞=LYM、血小板=PLT、
   血红蛋白=HGB、补体C3=C3、补体C4=C4、抗双链DNA=anti-dsDNA、
-  尿蛋白=UPRO、肌酐=Cr、凝血酶原时间=PT、INR=INR
+  尿蛋白=UPRO、肌酐=Cr、凝血酶原时间=PT、INR=INR、D-二聚体=D-Dimer
+- 对于尿常规报告，单位通常无需填写，value_text 用于记录 + 或 - 或具体文字
 """
 
 SYMPTOM_SYSTEM_PROMPT = """你是一个红斑狼疮（SLE）专科医疗助手。
@@ -154,6 +165,134 @@ SYMPTOM_RULES = {
 
 
 # ────────────────────────────────────────────────────────────
+# Vision 图片解析（通义千问 qwen-vl-plus / gpt-4o 等多模态模型）
+# ────────────────────────────────────────────────────────────
+
+def _vision_parse_image(image_path: str, cfg) -> dict:
+    """
+    使用多模态视觉模型直接识别化验单图片（通义千问 qwen-vl-plus 等）
+    use_vision=true 时调用，跳过 OCR 步骤
+    """
+    client = _build_openai_client(cfg)
+    with open(image_path, "rb") as f:
+        img_b64 = base64.b64encode(f.read()).decode()
+
+    ext = Path(image_path).suffix.lower().lstrip(".")
+    mime_map = {"jpg": "image/jpeg", "jpeg": "image/jpeg", "png": "image/png",
+                "webp": "image/webp", "bmp": "image/bmp", "gif": "image/gif"}
+    mime = mime_map.get(ext, "image/jpeg")
+
+    # 构造多模态消息（OpenAI vision 格式，通义千问兼容）
+    messages = [
+        {"role": "system", "content": LAB_SYSTEM_PROMPT},
+        {
+            "role": "user",
+            "content": [
+                {
+                    "type": "image_url",
+                    "image_url": {"url": f"data:{mime};base64,{img_b64}"},
+                },
+                {
+                    "type": "text",
+                    "text": "请从这张化验单图片中提取所有检验指标，按照 JSON 格式输出。"
+                           "注意识别检查日期、医院名称、报告类别，以及每个指标的名称、数值、单位和参考范围。",
+                },
+            ],
+        },
+    ]
+
+    resp = client.chat.completions.create(
+        model=cfg.model,
+        messages=messages,
+        temperature=0.1,
+        max_tokens=4096,
+    )
+    raw = resp.choices[0].message.content or "{}"
+
+    # 提取 JSON（兼容模型包裹在 markdown 代码块里的情况）
+    match = re.search(r"```json\s*([\s\S]+?)\s*```", raw)
+    if match:
+        raw = match.group(1)
+    # 再次尝试提取 {...} 块
+    match2 = re.search(r"(\{[\s\S]+\})", raw)
+    if match2:
+        raw = match2.group(1)
+
+    try:
+        result = json.loads(raw)
+    except json.JSONDecodeError as e:
+        raise RuntimeError(f"Vision 模型返回格式非 JSON: {e}\n原始内容: {raw[:500]}")
+
+    if "indicators" not in result:
+        result["indicators"] = []
+    return result
+
+
+# ────────────────────────────────────────────────────────────
+# Vision 图片解析（通义千问 qwen-vl-plus / gpt-4o 等多模态模型）
+# ────────────────────────────────────────────────────────────
+
+def _vision_parse_image(image_path: str, cfg) -> dict:
+    """
+    使用多模态视觉模型直接识别化验单图片（通义千问 qwen-vl-plus 等）
+    use_vision=true 时调用，跳过 OCR 步骤
+    """
+    client = _build_openai_client(cfg)
+    with open(image_path, "rb") as f:
+        img_b64 = base64.b64encode(f.read()).decode()
+
+    ext = Path(image_path).suffix.lower().lstrip(".")
+    mime_map = {"jpg": "image/jpeg", "jpeg": "image/jpeg", "png": "image/png",
+                "webp": "image/webp", "bmp": "image/bmp", "gif": "image/gif"}
+    mime = mime_map.get(ext, "image/jpeg")
+
+    # 构造多模态消息（OpenAI vision 格式，通义千问兼容）
+    messages = [
+        {"role": "system", "content": LAB_SYSTEM_PROMPT},
+        {
+            "role": "user",
+            "content": [
+                {
+                    "type": "image_url",
+                    "image_url": {"url": f"data:{mime};base64,{img_b64}"},
+                },
+                {
+                    "type": "text",
+                    "text": "请从这张化验单图片中提取所有检验指标，按照 JSON 格式输出。"
+                           "注意识别检查日期、医院名称、报告类别，以及每个指标的名称、数值、单位和参考范围。",
+                },
+            ],
+        },
+    ]
+
+    resp = client.chat.completions.create(
+        model=cfg.model,
+        messages=messages,
+        temperature=0.1,
+        max_tokens=4096,
+    )
+    raw = resp.choices[0].message.content or "{}"
+
+    # 提取 JSON（兼容模型包裹在 markdown 代码块里的情况）
+    match = re.search(r"```json\s*([\s\S]+?)\s*```", raw)
+    if match:
+        raw = match.group(1)
+    # 再次尝试提取 {...} 块
+    match2 = re.search(r"(\{[\s\S]+\})", raw)
+    if match2:
+        raw = match2.group(1)
+
+    try:
+        result = json.loads(raw)
+    except json.JSONDecodeError as e:
+        raise RuntimeError(f"Vision 模型返回格式非 JSON: {e}\n原始内容: {raw[:500]}")
+
+    if "indicators" not in result:
+        result["indicators"] = []
+    return result
+
+
+# ────────────────────────────────────────────────────────────
 # 对外接口
 # ────────────────────────────────────────────────────────────
 
@@ -180,29 +319,8 @@ def parse_lab_image(image_path: str) -> dict:
         return {"indicators": [], "confidence": 0.0}
 
     if cfg.use_vision:
-        # 直接使用多模态视觉模型（如 gpt-4o、llava）
-        client = _build_openai_client(cfg)
-        with open(image_path, "rb") as f:
-            image_b64 = base64.b64encode(f.read()).decode()
-        # 判断格式
-        ext = Path(image_path).suffix.lower()
-        mime = {"jpg": "jpeg", "jpeg": "jpeg", "png": "png", "webp": "webp"}.get(ext.lstrip("."), "jpeg")
-        resp = client.chat.completions.create(
-            model=cfg.model,
-            messages=[
-                {"role": "system", "content": LAB_SYSTEM_PROMPT},
-                {"role": "user", "content": [
-                    {"type": "text", "text": "请解析这张化验单图片，提取所有指标："},
-                    {"type": "image_url", "image_url": {"url": f"data:image/{mime};base64,{image_b64}"}},
-                ]},
-            ],
-            temperature=0.1,
-        )
-        raw = resp.choices[0].message.content or "{}"
-        match = re.search(r"```json\s*([\s\S]+?)\s*```", raw)
-        if match:
-            raw = match.group(1)
-        return json.loads(raw)
+        # 直接使用多模态视觉模型（通义千问 qwen-vl-plus / gpt-4o / llava 等），跳过 OCR
+        return _vision_parse_image(image_path, cfg)
     else:
         # OCR → 文本解析
         ocr_text = _extract_text_from_image(image_path)

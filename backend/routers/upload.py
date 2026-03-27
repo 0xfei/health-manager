@@ -233,12 +233,18 @@ async def confirm_upload(
         # 仍未匹配：自动创建自定义指标（前端已勾选"自动创建"选项时）
         if not defn and item.get("auto_create"):
             from datetime import datetime
+            # 继承报告类别：item > ai_parsed_json.report_category > "其他"
+            auto_category = (
+                item.get("category")
+                or parsed.get("report_category")
+                or "其他"
+            )
             defn = IndicatorDefinition(
                 id=str(uuid.uuid4()),
                 name=name or code,
                 code=code or name,
                 unit=item.get("unit"),
-                category="其他",
+                category=auto_category,
                 is_system=False,
                 created_at=datetime.utcnow(),
             )

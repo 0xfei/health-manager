@@ -15,8 +15,9 @@ import { usePrint } from '../../hooks/usePrint'
 
 const { Title, Text } = Typography
 const { Option } = Select
+const { RangePicker } = DatePicker
 
-const categories = ['血常规', '免疫', '炎症', '肾功能', '肝功能', '凝血/APS', '其他']
+const categories = ['血常规', '尿常规', '免疫', '炎症', '肾功能', '肝功能', '凝血/APS', '生化全项', '其他']
 
 function statusColor(r: IndicatorRecord) {
   const v = r.value
@@ -40,6 +41,10 @@ export default function Indicators() {
   const [form] = Form.useForm()
   const [defForm] = Form.useForm()
   const [loading, setLoading] = useState(false)
+  // 日期范围筛选
+  const [dateRange, setDateRange] = useState<[dayjs.Dayjs | null, dayjs.Dayjs | null] | null>(null)
+  // 分类筛选
+  const [categoryFilter, setCategoryFilter] = useState<string | null>(null)
 
   const loadDefinitions = useCallback(async () => {
     const defs = await fetchDefinitions()
@@ -48,9 +53,13 @@ export default function Indicators() {
   }, [selectedDef])
 
   const loadRecords = useCallback(async () => {
-    const recs = await fetchRecords(selectedDef ? { indicator_id: selectedDef } : undefined)
+    const params: { indicator_id?: string; start_date?: string; end_date?: string } = {}
+    if (selectedDef) params.indicator_id = selectedDef
+    if (dateRange?.[0]) params.start_date = dateRange[0].format('YYYY-MM-DD')
+    if (dateRange?.[1]) params.end_date = dateRange[1].format('YYYY-MM-DD')
+    const recs = await fetchRecords(Object.keys(params).length ? params : undefined)
     setRecords(recs)
-  }, [selectedDef])
+  }, [selectedDef, dateRange])
 
   const loadChart = useCallback(async () => {
     if (!selectedDef) return
@@ -68,7 +77,7 @@ export default function Indicators() {
   useEffect(() => { loadDefinitions(); loadAllRecords() }, [])
   useEffect(() => {
     if (selectedDef) { loadRecords(); loadChart() }
-  }, [selectedDef])
+  }, [selectedDef, dateRange])
 
   const selectedDefinition = definitions.find(d => d.id === selectedDef)
 
@@ -116,8 +125,11 @@ export default function Indicators() {
     allRecords.map(r => r.indicator_id).filter(Boolean)
   )
 
-  // group definitions by category（只展示有数据的指标）
-  const defsToShow = definitions.filter(d => defsWithData.has(d.id) || d.id === selectedDef)
+  // group definitions by category（只展示有数据的指标，并按分类筛选）
+  const defsToShow = definitions.filter(d =>
+    (defsWithData.has(d.id) || d.id === selectedDef) &&
+    (!categoryFilter || d.category === categoryFilter)
+  )
   const grouped = defsToShow.reduce<Record<string, IndicatorDefinition[]>>((acc, d) => {
     const cat = d.category ?? '其他'
     if (!acc[cat]) acc[cat] = []
@@ -165,6 +177,12 @@ export default function Indicators() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
         <Title level={4} style={{ margin: 0 }}>检验指标</Title>
         <Space>
+          <RangePicker
+            size="small"
+            placeholder={['开始日期', '结束日期']}
+            style={{ width: 220 }}
+            onChange={(dates) => setDateRange(dates as [dayjs.Dayjs, dayjs.Dayjs] | null)}
+          />
           <Button icon={<PrinterOutlined />} size="small" onClick={handlePrint}>打印</Button>
           <Button icon={<PlusOutlined />} onClick={() => setAddDefModal(true)}>新增指标</Button>
           <Button type="primary" icon={<PlusOutlined />} onClick={() => setAddRecordModal(true)} disabled={!selectedDef}>
@@ -177,7 +195,20 @@ export default function Indicators() {
       <Row gutter={16}>
         {/* Left: indicator selector */}
         <Col span={5}>
-          <Card size="small" title="指标列表" style={{ height: '100%' }}>
+          <Card size="small" title={
+            <Space>
+              <span>指标列表</span>
+              <Select
+                size="small"
+                placeholder="分类"
+                allowClear
+                style={{ width: 80, fontSize: 12 }}
+                value={categoryFilter}
+                onChange={setCategoryFilter}
+                options={categories.map(c => ({ value: c, label: c }))}
+              />
+            </Space>
+          } style={{ height: '100%' }}>
             {Object.entries(grouped).map(([cat, defs]) => (
               <div key={cat} style={{ marginBottom: 12 }}>
                 <Text type="secondary" style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{cat}</Text>

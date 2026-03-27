@@ -8,6 +8,7 @@ import Medications from './pages/Medications'
 import APSPage from './pages/APS'
 import Visits from './pages/Visits'
 import Upload from './pages/Upload'
+import Reports from './pages/Reports'
 import Login from './pages/Login'
 import Settings from './pages/Settings'
 
@@ -32,6 +33,7 @@ export default function App() {
           <Route path="aps" element={<APSPage />} />
           <Route path="visits" element={<Visits />} />
           <Route path="upload" element={<Upload />} />
+          <Route path="reports" element={<Reports />} />
           <Route path="settings" element={<Settings />} />
         </Route>
       </Routes>
