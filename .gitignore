@@ -1,0 +1,46 @@
+# ============================================================
+# .gitignore — SLE Health Manager
+# ============================================================
+
+# ── 用户数据（不提交，各用户本地存储）─────────────────────
+data/health.db
+data/uploads/
+
+# ── Python 虚拟环境 ─────────────────────────────────────────
+.venv/
+venv/
+env/
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyc
+.pytest_cache/
+.coverage
+htmlcov/
+dist/
+*.egg-info/
+
+# ── Node / 前端 ────────────────────────────────────────────
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+frontend/coverage/
+frontend/*.tsbuildinfo
+
+# ── 系统文件 ──────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+.idea/
+.vscode/settings.json
+*.log
+
+# ── 环境变量 ──────────────────────────────────────────────
+.env
+.env.local
+.env.*.local
+
+# ── 保留 data 目录本身（空目录占位）─────────────────────────
+!data/.gitkeep
+!data/uploads/.gitkeep

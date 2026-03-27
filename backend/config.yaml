@@ -1,0 +1,86 @@
+# ============================================================
+# SLE 健康管理系统 - 全局配置文件
+# 复制此文件到项目根目录后修改，或直接编辑此文件
+# ============================================================
+
+# ── 解析服务配置 ────────────────────────────────────────────
+parse:
+
+  # 文本解析：从纯文字化验单/描述中提取指标
+  text:
+    provider: ollama          # 可选: openai | ollama | disabled
+    model: qwen2.5:7b         # openai: gpt-4o / gpt-4-turbo; ollama: qwen2.5:7b / llama3
+    api_key: ""               # openai 必填; ollama 留空
+    base_url: http://localhost:11434/v1   # ollama 本地地址; openai: https://api.openai.com/v1
+    timeout: 30               # 请求超时（秒）
+
+  # 图片解析：从化验单照片/截图中提取指标（先 OCR 后 LLM）
+  image:
+    # 第一步：OCR 提取文字
+    ocr_engine: paddleocr     # 可选: paddleocr | tesseract | none（跳过OCR，直接发给vision模型）
+    ocr_lang: ch              # paddleocr语言: ch(中文) | en | ch_en
+    # 第二步：LLM 解析 OCR 结果（或直接用 vision 模型）
+    provider: ollama          # 可选: openai | ollama | disabled
+    model: qwen2.5:7b         # vision模型示例: gpt-4o | llava:13b
+    api_key: ""
+    base_url: http://localhost:11434/v1
+    use_vision: false         # true=直接把图片发给多模态模型; false=先OCR再文本解析
+    timeout: 60
+
+  # 文档解析：PDF 化验报告
+  document:
+    # PDF 转图片后走 image 流程，或直接提取文字走 text 流程
+    pdf_backend: pymupdf      # 可选: pymupdf | pdfplumber | pypdf2
+    fallback_to_image: true   # PDF 文字提取失败时转图片处理
+    provider: ollama          # 同 text provider
+    model: qwen2.5:7b
+    api_key: ""
+    base_url: http://localhost:11434/v1
+
+  # 症状文字解析：自然语言 → 结构化症状列表
+  symptom:
+    provider: ollama          # 可选: openai | ollama | rule_based（无LLM纯规则匹配）
+    model: qwen2.5:7b
+    api_key: ""
+    base_url: http://localhost:11434/v1
+    # rule_based 模式：基于关键词匹配，完全离线，精度较低
+    # ollama/openai 模式：语义理解，精度高
+
+# ── OpenAI 兼容接口说明 ─────────────────────────────────────
+# 所有 provider=openai 的配置均兼容任何 OpenAI 格式 API，包括：
+# - 官方 OpenAI:     base_url: https://api.openai.com/v1
+# - Azure OpenAI:    base_url: https://<your>.openai.azure.com/openai/deployments/<model>
+# - 本地 Ollama:     base_url: http://localhost:11434/v1  (api_key 留空或填 "ollama")
+# - 本地 LM Studio:  base_url: http://localhost:1234/v1
+# - 通义千问 API:    base_url: https://dashscope.aliyuncs.com/compatible-mode/v1
+
+# ── 数据库配置 ──────────────────────────────────────────────
+database:
+  # SQLite 单文件，路径相对于项目根目录
+  # 整个 data/ 目录就是全部数据，拷贝即迁移
+  path: data/health.db
+
+# ── 文件上传配置 ────────────────────────────────────────────
+upload:
+  dir: data/uploads           # 上传文件存储目录
+  max_size_mb: 20             # 单文件最大大小（MB）
+  allowed_types:
+    - image/jpeg
+    - image/png
+    - image/webp
+    - application/pdf
+    - text/plain
+
+# ── 指标异常阈值说明 ────────────────────────────────────────
+# 阈值存储在 SQLite 数据库 indicator_definitions 表中，每个指标有4个阈值字段：
+#   ref_min  / ref_max  : 正常参考范围（绿色区间，来自医学标准）
+#   warn_low / warn_high: 预警线（红色，超出则标记危险）
+#
+# 阈值优先级（由高到低）:
+#   1. 数据库中的个人化设置（用户在"指标管理"页手动修改）
+#   2. 种子数据默认值（backend/seeds/indicators.py）
+#
+# 修改阈值的方式:
+#   - 前端: 「检验指标」→ 选择指标 → 点击「编辑阈值」按钮
+#   - API:  PUT /api/indicators/definitions/{id}
+#   - 直接修改 seeds/indicators.py 后删除 data/health.db 重新初始化
